@@ -8,6 +8,7 @@
   "bundles/easyadmin/form-type-collection.js": "./form-type-collection.js",
   "bundles/easyadmin/form-type-slug.js": "./form-type-slug.js",
   "bundles/easyadmin/form-type-textarea.js": "./form-type-textarea.js",
+  "bundles/easyadmin/form-type-embedded-list.js": "./form-type-embedded-list.js",
   "bundles/easyadmin/fonts/fa-solid-900.svg": "./fonts/fa-solid-900.7a8b4f130182d19a2d7c67d80c090397.svg",
   "bundles/easyadmin/images/fa-solid-900.svg": "./images/fa-solid-900.7a8b4f13.svg",
   "bundles/easyadmin/fonts/fa-brands-400.svg": "./fonts/fa-brands-400.2f517e09eb2ca6650ff5bec5a95157ab.svg",

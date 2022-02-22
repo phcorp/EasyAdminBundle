@@ -44,7 +44,7 @@
     {%- endapply -%}
 {% endblock %}
 
-{% set has_batch_actions = batch_actions|length > 0 %}
+{% set has_batch_actions = batch_actions|default({})|length > 0 %}
 {% block page_actions %}
     {% if filters|length > 0 %}
         <div class="datagrid-filters">
