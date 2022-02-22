@@ -799,3 +799,7 @@
         </button>
     </div>
 {% endblock %}
+
+{%- block embedded_list_widget -%}
+    {{ render_esi(embedded_list_url) }}
+{%- endblock embedded_list_widget -%}

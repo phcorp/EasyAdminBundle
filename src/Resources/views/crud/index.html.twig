@@ -16,7 +16,6 @@
     {%- endapply -%}
 {% endblock %}
 
-{% set has_batch_actions = batch_actions|length > 0 %}
 {% block page_actions %}
     {% if filters|length > 0 %}
         <div class="datagrid-filters">
@@ -44,7 +43,7 @@
         </div>
     {% endblock global_actions %}
     {% block batch_actions %}
-        {% if has_batch_actions %}
+        {% if has_batch_actions|default(false) %}
             <div class="batch-actions" style="display: none">
                 {% for action in batch_actions %}
                     {{ include(action.templatePath, { action: action }, with_context = false) }}
@@ -69,7 +68,7 @@
             <thead>
             {% block table_head %}
                 <tr>
-                    {% if has_batch_actions %}
+                    {% if has_batch_actions|default(false) %}
                         <th>
                             <div class="form-check">
                                 <span><input type="checkbox" class="form-check-input form-batch-checkbox-all"></span>
@@ -110,7 +109,7 @@
                     {% set some_results_are_hidden = true %}
                 {% else %}
                     <tr data-id="{{ entity.primaryKeyValueAsString }}">
-                        {% if has_batch_actions %}
+                        {% if has_batch_actions|default(false) %}
                             <td class="batch-actions-selector">
                                 <div class="form-check">
                                     <input type="checkbox" class="form-check-input form-batch-checkbox" value="{{ entity.primaryKeyValue }}">
@@ -209,7 +208,7 @@
         {{ include('@EasyAdmin/crud/includes/_filters_modal.html.twig') }}
     {% endif %}
 
-    {% if has_batch_actions %}
+    {% if has_batch_actions|default(false) %}
         {{ include('@EasyAdmin/crud/includes/_batch_action_modal.html.twig', {}, with_context = false) }}
     {% endif %}
 {% endblock main %}

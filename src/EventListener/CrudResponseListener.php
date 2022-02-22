@@ -3,6 +3,7 @@
 namespace EasyCorp\Bundle\EasyAdminBundle\EventListener;
 
 use EasyCorp\Bundle\EasyAdminBundle\Config\KeyValueStore;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Provider\AdminContextProvider;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,6 +46,12 @@ final class CrudResponseListener
             if ($paramValue instanceof FormInterface) {
                 $templateParameters[$paramName] = $paramValue->createView();
             }
+        }
+
+        if ($block = $event->getRequest()->query->get(EA::TEMPLATE_BLOCK)) {
+            $event->setResponse(new Response($this->twig->load($templatePath)->renderBlock($block, $templateParameters)));
+
+            return;
         }
 
         $event->setResponse(new Response($this->twig->render($templatePath, $templateParameters)));

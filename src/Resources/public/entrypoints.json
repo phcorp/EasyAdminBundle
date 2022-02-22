@@ -41,6 +41,11 @@
       "js": [
         "./form-type-textarea.js"
       ]
+    },
+    "form-type-embedded-list": {
+      "js": [
+        "./form-type-embedded-list.js"
+      ]
     }
   }
 }

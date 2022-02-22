@@ -12,6 +12,10 @@ Encore
     .enableVersioning(false)
     .disableSingleRuntimeChunk()
 
+    .configureBabel((config) => {
+        config.plugins.push('@babel/plugin-transform-runtime');
+    })
+
     // copy FontAwesome fonts
     .copyFiles({
         from: './node_modules/@fortawesome/fontawesome-free/webfonts/',
@@ -34,6 +38,7 @@ Encore
     .addEntry('form-type-collection', './assets/js/form-type-collection.js')
     .addEntry('form-type-slug', './assets/js/form-type-slug.js')
     .addEntry('form-type-textarea', './assets/js/form-type-textarea.js')
+    .addEntry('form-type-embedded-list', './assets/js/form-type-embedded-list.js')
 ;
 
 module.exports = Encore.getWebpackConfig();

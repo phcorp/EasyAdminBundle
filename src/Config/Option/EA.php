@@ -28,5 +28,6 @@ final class EA
     public const ROUTE_PARAMS = 'routeParams';
     public const SORT = 'sort';
     public const SUBMENU_INDEX = 'submenuIndex';
+    public const TEMPLATE_BLOCK = 'templateBlock';
     public const URL_SIGNATURE = 'signature';
 }
