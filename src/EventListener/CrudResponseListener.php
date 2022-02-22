@@ -3,6 +3,7 @@
 namespace EasyCorp\Bundle\EasyAdminBundle\EventListener;
 
 use EasyCorp\Bundle\EasyAdminBundle\Config\KeyValueStore;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Contracts\Provider\AdminContextProviderInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,6 +46,14 @@ final class CrudResponseListener
                 $formErrorCount = max($formErrorCount, \count($paramValue->getErrors(true)));
             }
         }
+
+        // embedded-list ESI: render only the requested template block when asked
+        if ($block = $event->getRequest()->query->get(EA::TEMPLATE_BLOCK)) {
+            $event->setResponse(new Response($this->twig->load($templatePath)->renderBlock($block, $templateParameters)));
+
+            return;
+        }
+
         $httpCode = $formErrorCount > 0 ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK;
         $event->setResponse(new Response($this->twig->render($templatePath, $templateParameters), $httpCode));
     }

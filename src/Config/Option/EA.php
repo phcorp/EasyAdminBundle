@@ -31,6 +31,7 @@ final class EA
     public const SORT = 'sort';
     /** @deprecated this parameter is no longer used because menu items are now highlighted automatically */
     public const SUBMENU_INDEX = 'submenuIndex';
+    public const TEMPLATE_BLOCK = 'templateBlock';
     /** @deprecated this parameter is no longer used because URLs no longer include a signed hash */
     public const URL_SIGNATURE = 'signature';
 }

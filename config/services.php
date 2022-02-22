@@ -76,6 +76,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Form\Extension\CollectionTypeExtension;
 use EasyCorp\Bundle\EasyAdminBundle\Form\Extension\EaCrudFormTypeExtension;
 use EasyCorp\Bundle\EasyAdminBundle\Form\Type\CrudAutocompleteType;
 use EasyCorp\Bundle\EasyAdminBundle\Form\Type\CrudFormType;
+use EasyCorp\Bundle\EasyAdminBundle\Form\Type\EmbeddedListType;
 use EasyCorp\Bundle\EasyAdminBundle\Form\Type\FileUploadType;
 use EasyCorp\Bundle\EasyAdminBundle\Form\Type\FiltersFormType;
 use EasyCorp\Bundle\EasyAdminBundle\Intl\IntlFormatter;
@@ -325,6 +326,11 @@ return static function (ContainerConfigurator $container) {
         ->set(FilterFactory::class)
             ->arg(0, service(AdminContextProvider::class))
             ->arg(1, tagged_iterator(EasyAdminExtension::TAG_FILTER_CONFIGURATOR))
+
+        ->set(EmbeddedListType::class)
+            ->arg(0, new Reference(AdminUrlGenerator::class))
+            ->arg(1, new Reference(CrudControllerRegistry::class))
+        ->tag('form.type')
 
         ->set(FiltersFormType::class)
             ->tag('form.type', ['alias' => 'ea_filters'])
