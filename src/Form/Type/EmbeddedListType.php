@@ -61,7 +61,7 @@ class EmbeddedListType extends AbstractType
             $ownerId = $owner->getId();
             $refClass = new \ReflectionClass($owner);
             $refProperty = $refClass->getProperty($ownerField);
-            if (preg_match('/@var (?:(?:Array)?Collection<([^>]*)>|(\w+)\[])/', $refProperty->getDocComment(), $matches)) {
+            if (preg_match('/@var (?:(?:Array)?Collection<(?:[^,>]+,\s*)?([^>]+)>|(\w+)\[])/', $refProperty->getDocComment(), $matches)) {
                 $entityFqcn = class_exists($matches[1]) ? $matches[1] : sprintf('%s\\%s', $refClass->getNamespaceName(), $matches[1]);
             }
         }
