@@ -42,7 +42,7 @@ class EmbeddedListType extends AbstractType
      * - Source entity MUST have a single field identifier accessible by method ::getId()
      * - Index controller of the target entity MUST be filterable with source entity
      */
-    public function buildView(FormView $view, FormInterface $form, array $options)
+    public function buildView(FormView $view, FormInterface $form, array $options): void
     {
         /** @var PersistentCollection $data */
         $data = $form->getData();
