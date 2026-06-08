@@ -25,4 +25,5 @@ final class EA
     public const ROUTE_PARAMS = 'routeParams';
     public const ROUTE_CREATED_BY_EASYADMIN = 'routeCreatedByEasyAdmin';
     public const SORT = 'sort';
+    public const TEMPLATE_BLOCK = 'templateBlock';
 }

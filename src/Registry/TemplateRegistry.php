@@ -38,6 +38,7 @@ final class TemplateRegistry
         'crud/field/decimal' => '@EasyAdmin/crud/field/decimal.html.twig',
         'crud/field/email' => '@EasyAdmin/crud/field/email.html.twig',
         'crud/field/file' => '@EasyAdmin/crud/field/file.html.twig',
+        'crud/field/embedded_list' => '@EasyAdmin/crud/field/embedded_list.html.twig',
         'crud/field/float' => '@EasyAdmin/crud/field/float.html.twig',
         'crud/field/generic' => '@EasyAdmin/crud/field/generic.html.twig',
         'crud/field/hidden' => '@EasyAdmin/crud/field/hidden.html.twig',
