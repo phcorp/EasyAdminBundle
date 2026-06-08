@@ -208,7 +208,12 @@ final readonly class CommonPreConfigurator implements FieldConfiguratorInterface
             $associationMapping = $entityDto->getClassMetadata()->associationMappings[$field->getProperty()];
             /** @var class-string $targetEntityFqcn */
             $targetEntityFqcn = $entityDto->getClassMetadata()->getAssociationTargetClass($field->getProperty());
-            $associatedEntityMetadata = $this->entityFactory->getEntityMetadata($targetEntityFqcn);
+            // Resolve the target metadata lazily and only on the inverse side,
+            // where it is actually used. Doing it eagerly fatally fails for
+            // associations whose target has a composite primary key (e.g. a
+            // toMany collection of a join entity), even though such inverse-side
+            // collections have no join columns to inspect at all.
+            $associatedEntityMetadata = null;
             foreach ($associationMapping['joinColumns'] ?? [] as $joinColumn) {
                 if (true === $associationMapping['isOwningSide']) {
                     if ($joinColumn instanceof JoinColumnMapping) {
@@ -217,6 +222,7 @@ final readonly class CommonPreConfigurator implements FieldConfiguratorInterface
                         $isNullable = $joinColumn['nullable'] ?? true;
                     }
                 } else {
+                    $associatedEntityMetadata ??= $this->entityFactory->getEntityMetadata($targetEntityFqcn);
                     $propertyNameInAssociatedEntity = $joinColumn instanceof JoinColumnMapping ? $joinColumn->referencedColumnName : $joinColumn['referencedColumnName'];
                     $associatedPropertyMetadata = $associatedEntityMetadata->fieldMappings[$propertyNameInAssociatedEntity] ?? [];
                     $isNullable = $associatedPropertyMetadata['nullable'] ?? true;

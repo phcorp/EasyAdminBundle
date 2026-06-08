@@ -1,0 +1,8 @@
+{# Bare layout for embedded-list ESI fragments (see EmbeddedListType +
+   CrudResponseListener). The CRUD index template extends the configured
+   "layout" and overrides its `main` block with the list; for an embedded
+   fragment we swap that layout for this one so only the `main` content is
+   emitted — no <head>, sidebar, header or other page chrome. The index
+   template's own template-level statements ({% set ea %},
+   {% trans_default_domain %}, …) still run because this is a full render. #}
+{% block main %}{% endblock %}

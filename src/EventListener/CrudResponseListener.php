@@ -47,9 +47,19 @@ final readonly class CrudResponseListener
             }
         }
 
-        // embedded-list ESI: render only the requested template block when asked
-        if ($block = $event->getRequest()->query->get(EA::TEMPLATE_BLOCK)) {
-            $event->setResponse(new Response($this->twig->load($templatePath)->renderBlock($block, $templateParameters)));
+        // embedded-list ESI: render only the main CRUD content, without the page
+        // chrome. The index template can't be rendered a block at a time
+        // (its `main` block depends on template-level statements such as
+        // `{% set ea %}` and `{% trans_default_domain %}` that a block render
+        // skips), so instead do a full render with the layout swapped for a bare
+        // one that outputs just the `main` block.
+        if (null !== $event->getRequest()->query->get(EA::TEMPLATE_BLOCK)) {
+            $context = $this->adminContextProvider->getContext();
+            $i18nContext = (new \ReflectionProperty($context, 'i18nContext'))->getValue($context);
+            $templateRegistry = (new \ReflectionProperty($i18nContext, 'templateRegistry'))->getValue($i18nContext);
+            $templateRegistry->setTemplate('layout', '@EasyAdmin/layout_embedded.html.twig');
+
+            $event->setResponse(new Response($this->twig->render($templatePath, $templateParameters)));
 
             return;
         }

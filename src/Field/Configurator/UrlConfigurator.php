@@ -8,6 +8,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Contracts\Field\FieldConfiguratorInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\FieldDto;
 use EasyCorp\Bundle\EasyAdminBundle\Field\UrlField;
+use Symfony\Component\Form\Extension\Core\Type\UrlType;
 use Symfony\Component\Validator\Constraints\Url;
 use function Symfony\Component\String\u;
 
@@ -33,7 +34,13 @@ final class UrlConfigurator implements FieldConfiguratorInterface
     public function configure(FieldDto $field, EntityDto $entityDto, AdminContext $context): void
     {
         $field->setFormTypeOptionIfNotSet('attr.inputmode', 'url');
-        $field->setFormTypeOptionIfNotSet('default_protocol', $field->getCustomOption(UrlField::OPTION_DEFAULT_PROTOCOL));
+        // `default_protocol` is a UrlType option (removed from TextType in
+        // Symfony 8). Only set it when the field actually renders as a UrlType,
+        // so fields that override the form type (e.g. a TextType with a custom
+        // widget) don't fail resolving an option their type doesn't define.
+        if (UrlType::class === $field->getFormType()) {
+            $field->setFormTypeOptionIfNotSet('default_protocol', $field->getCustomOption(UrlField::OPTION_DEFAULT_PROTOCOL));
+        }
 
         $allowedProtocols = $field->getCustomOption(UrlField::OPTION_ALLOWED_PROTOCOLS);
         if (\is_array($allowedProtocols)) {
