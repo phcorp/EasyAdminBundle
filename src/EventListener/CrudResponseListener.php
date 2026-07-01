@@ -3,7 +3,6 @@
 namespace EasyCorp\Bundle\EasyAdminBundle\EventListener;
 
 use EasyCorp\Bundle\EasyAdminBundle\Config\KeyValueStore;
-use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Contracts\Provider\AdminContextProviderInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -47,13 +46,17 @@ final readonly class CrudResponseListener
             }
         }
 
-        // embedded-list ESI: render only the main CRUD content, without the page
-        // chrome. The index template can't be rendered a block at a time
-        // (its `main` block depends on template-level statements such as
-        // `{% set ea %}` and `{% trans_default_domain %}` that a block render
-        // skips), so instead do a full render with the layout swapped for a bare
-        // one that outputs just the `main` block.
-        if (null !== $event->getRequest()->query->get(EA::TEMPLATE_BLOCK)) {
+        // Embedded-list fragment render: emit only the main CRUD content, without
+        // the page chrome. Triggered by the `X-EA-Fragment: 1` HTTP header set
+        // by the client-side JS module that fetches the URL — a header, not a
+        // URL query param, so no URL builder ever inherits or leaks the marker.
+        //
+        // The index template can't be rendered a block at a time (its `main`
+        // block depends on template-level statements such as `{% set ea %}` and
+        // `{% trans_default_domain %}` that a block-only render skips), so
+        // instead we do a full render with the layout swapped for a bare one
+        // that outputs just the `main` block.
+        if ('1' === $event->getRequest()->headers->get('X-EA-Fragment')) {
             $context = $this->adminContextProvider->getContext();
             $i18nContext = (new \ReflectionProperty($context, 'i18nContext'))->getValue($context);
             $templateRegistry = (new \ReflectionProperty($i18nContext, 'templateRegistry'))->getValue($i18nContext);

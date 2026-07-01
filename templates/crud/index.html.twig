@@ -254,26 +254,27 @@
         </div>
     {% endif %}
 
+    {# When this index is rendered as an EmbeddedListType fragment (identified
+       by the `X-EA-Fragment: 1` header set by the client-side JS module), the
+       modals below each contain an inner <form>. Splicing them INSIDE the
+       parent EA edit <form> would flatten the nested tags — the outer
+       `</form>` closes the edit form early, orphaning its `_token` CSRF
+       hidden field and surfacing "The CSRF token is invalid" on save. All
+       three modals (delete confirmation, filters, batch actions) share the
+       same nested-<form> risk, so suppress the whole cluster on fragments.
+       Standalone index pages keep them. #}
+    {% set is_ea_fragment = '1' == app.request.headers.get('X-EA-Fragment') %}
     {% block delete_form %}
-        {# When this index is rendered as an EmbeddedListType ESI fragment
-           (identified by the `templateBlock=main` query param set by
-           EmbeddedListType::buildForm), the delete-confirmation modal's
-           <form> gets spliced INSIDE the parent EA edit form. HTML
-           flattens the nested form tags: the outer `</form>` closes the
-           edit form early, orphaning its `_token` CSRF hidden field and
-           surfacing "The CSRF token is invalid" on every save. Suppress
-           the modal here for embedded fragments — the delete UX still
-           works on the standalone index page. #}
-        {% if not app.request.query.has('templateBlock') %}
+        {% if not is_ea_fragment %}
             {{ include('@EasyAdmin/crud/includes/_action_confirmation_modal.html.twig', with_context: false) }}
         {% endif %}
     {% endblock delete_form %}
 
-    {% if has_filters %}
+    {% if has_filters and not is_ea_fragment %}
         {{ include('@EasyAdmin/crud/includes/_filters_modal.html.twig') }}
     {% endif %}
 
-    {% if has_batch_actions %}
+    {% if has_batch_actions and not is_ea_fragment %}
         {{ include('@EasyAdmin/crud/includes/_batch_action_modal.html.twig', {}, with_context: false) }}
     {% endif %}
 {% endblock main %}

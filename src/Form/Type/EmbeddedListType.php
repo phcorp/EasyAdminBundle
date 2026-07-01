@@ -4,7 +4,6 @@ namespace EasyCorp\Bundle\EasyAdminBundle\Form\Type;
 
 use Doctrine\ORM\PersistentCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
-use EasyCorp\Bundle\EasyAdminBundle\Config\Option\EA;
 use EasyCorp\Bundle\EasyAdminBundle\Contracts\Registry\AdminControllerRegistryInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Symfony\Component\Form\AbstractType;
@@ -83,10 +82,18 @@ class EmbeddedListType extends AbstractType
             return;
         }
 
+        // The fragment marker used to live in the URL as `templateBlock=main`,
+        // but `AdminUrlGenerator::initialize()` copies the whole request query
+        // onto its route parameters — any URL builder that fired during a
+        // fragment request produced a URL carrying the marker, and the
+        // post-save/delete redirect landed on the bare embedded layout. The
+        // marker now travels as the `X-EA-Fragment` HTTP header set by the
+        // JS module that fetches this URL; `CrudResponseListener` sniffs the
+        // header instead of the query. Nothing in the URL says "partial",
+        // so no query-scrub gymnastics are needed anywhere downstream.
         $view->vars['embedded_list_url'] = $this->adminUrlGenerator
             ->setController($controllerFqcn)
             ->setAction(Action::INDEX)
-            ->set(EA::TEMPLATE_BLOCK, 'main')
             ->set("filters[$field][comparison]", '=')
             ->set("filters[$field][value]", (string) $entity->getId())
             ->generateUrl();
