@@ -35,6 +35,7 @@ async function loadFragment(list, url) {
             return;
         }
         list.innerHTML = html;
+        list.dataset.loaded = 'true';
         bindNavigation(list);
         document.dispatchEvent(new Event('ea.embedded-list.refreshed'));
     } catch (error) {
