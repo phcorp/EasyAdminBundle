@@ -380,6 +380,15 @@ abstract class AbstractCrudController extends AbstractController implements Crud
      */
     public function delete(AdminContext $context): KeyValueStore|Response
     {
+        // Strip the embedded-fragment flag from the incoming request before
+        // any downstream URL builder captures it: `AdminUrlGenerator` lazily
+        // copies the request's query onto its route-parameter bag, so any
+        // redirect built here (delete-then-index, forbidden fallback) would
+        // otherwise inherit `templateBlock=main` and CrudResponseListener
+        // would swap the layout to `layout_embedded.html.twig` — leaving the
+        // curator on a bare table with no chrome.
+        $context->getRequest()->query->remove(EA::TEMPLATE_BLOCK);
+
         $event = new BeforeCrudActionEvent($context);
         $this->container->get('event_dispatcher')->dispatch($event);
         if ($event->isPropagationStopped()) {
@@ -789,7 +798,21 @@ abstract class AbstractCrudController extends AbstractController implements Crud
      */
     protected function getRedirectResponseAfterSave(AdminContext $context, string $action): RedirectResponse
     {
-        $submitButtonName = $context->getRequest()->request->all()['ea']['newForm']['btn'] ?? null;
+        // Mirror `delete()`: strip the embedded-fragment flag from the
+        // request BEFORE building the redirect. AdminUrlGenerator would
+        // otherwise inherit `templateBlock=main` from the incoming query and
+        // stamp it on the post-save target, landing the curator on a bare
+        // `layout_embedded.html.twig` shell instead of the styled index/edit
+        // page.
+        $context->getRequest()->query->remove(EA::TEMPLATE_BLOCK);
+
+        // Defensive default: any save POST that lands here without the
+        // hidden `ea[newForm][btn]` field (password-manager auto-submit,
+        // JS-driven `form.submit()`, embedded-fragment resubmit) would
+        // otherwise short-circuit into the dashboard redirect branch, which
+        // is neither the primary nor the fallback intent. Treat a missing
+        // button as SAVE_AND_RETURN — the form's primary action.
+        $submitButtonName = $context->getRequest()->request->all()['ea']['newForm']['btn'] ?? Action::SAVE_AND_RETURN;
 
         $url = match ($submitButtonName) {
             Action::SAVE_AND_CONTINUE => $this->container->get(AdminUrlGeneratorInterface::class)
