@@ -798,35 +798,15 @@
 {% endblock %}
 
 {%- block embedded_list_widget -%}
-    {# Virtual / computed collections (no real Doctrine association) leave
-       `embedded_list_url` null: `EmbeddedListType` has no route to build.
-       `render_esi(null)` would then error. Skip the fragment (and the
-       companion refresh script — nothing to bind to) instead. #}
+    {# Pure client-side fetch: the widget emits an empty div; `form-type-embedded-list.js`
+       (registered via EmbeddedListField's addJsFiles) fetches the URL on load with
+       `X-EA-Fragment: 1`, injects the response HTML, and intercepts subsequent
+       pagination / sort / filter links + forms so the parent page never reloads. No
+       ESI, no Varnish coupling, no query-flag inheritance.
+
+       Virtual / computed collections resolve `embedded_list_url` to null when the
+       target CRUD can't be derived; render nothing instead of exposing a broken widget. #}
     {% if embedded_list_url|default(null) %}
-        {{ render_esi(embedded_list_url) }}
-        <script>
-        (function () {
-            if (window.eaEmbeddedListInit) { return; }
-            window.eaEmbeddedListInit = true;
-            var handler = function () {
-                document.querySelectorAll('.field-embedded-list').forEach(function (list) {
-                    list.querySelectorAll('a:not([data-fetch="true"])').forEach(function (link) {
-                        if (link.closest('.actions')) { return; }
-                        link.addEventListener('click', function (event) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            fetch(link.href).then(function (response) { return response.text(); }).then(function (html) {
-                                list.innerHTML = html;
-                                document.dispatchEvent(new Event('ea.embedded-list.refreshed'));
-                            });
-                        });
-                        link.dataset.fetch = 'true';
-                    });
-                });
-            };
-            window.addEventListener('DOMContentLoaded', handler);
-            document.addEventListener('ea.embedded-list.refreshed', handler);
-        })();
-        </script>
+        <div class="field-embedded-list" data-src="{{ embedded_list_url }}"></div>
     {% endif %}
 {%- endblock embedded_list_widget -%}
