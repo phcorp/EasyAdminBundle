@@ -255,7 +255,18 @@
     {% endif %}
 
     {% block delete_form %}
-        {{ include('@EasyAdmin/crud/includes/_action_confirmation_modal.html.twig', with_context: false) }}
+        {# When this index is rendered as an EmbeddedListType ESI fragment
+           (identified by the `templateBlock=main` query param set by
+           EmbeddedListType::buildForm), the delete-confirmation modal's
+           <form> gets spliced INSIDE the parent EA edit form. HTML
+           flattens the nested form tags: the outer `</form>` closes the
+           edit form early, orphaning its `_token` CSRF hidden field and
+           surfacing "The CSRF token is invalid" on every save. Suppress
+           the modal here for embedded fragments — the delete UX still
+           works on the standalone index page. #}
+        {% if not app.request.query.has('templateBlock') %}
+            {{ include('@EasyAdmin/crud/includes/_action_confirmation_modal.html.twig', with_context: false) }}
+        {% endif %}
     {% endblock delete_form %}
 
     {% if has_filters %}

@@ -798,29 +798,35 @@
 {% endblock %}
 
 {%- block embedded_list_widget -%}
-    {{ render_esi(embedded_list_url) }}
-    <script>
-    (function () {
-        if (window.eaEmbeddedListInit) { return; }
-        window.eaEmbeddedListInit = true;
-        var handler = function () {
-            document.querySelectorAll('.field-embedded-list').forEach(function (list) {
-                list.querySelectorAll('a:not([data-fetch="true"])').forEach(function (link) {
-                    if (link.closest('.actions')) { return; }
-                    link.addEventListener('click', function (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        fetch(link.href).then(function (response) { return response.text(); }).then(function (html) {
-                            list.innerHTML = html;
-                            document.dispatchEvent(new Event('ea.embedded-list.refreshed'));
+    {# Virtual / computed collections (no real Doctrine association) leave
+       `embedded_list_url` null: `EmbeddedListType` has no route to build.
+       `render_esi(null)` would then error. Skip the fragment (and the
+       companion refresh script — nothing to bind to) instead. #}
+    {% if embedded_list_url|default(null) %}
+        {{ render_esi(embedded_list_url) }}
+        <script>
+        (function () {
+            if (window.eaEmbeddedListInit) { return; }
+            window.eaEmbeddedListInit = true;
+            var handler = function () {
+                document.querySelectorAll('.field-embedded-list').forEach(function (list) {
+                    list.querySelectorAll('a:not([data-fetch="true"])').forEach(function (link) {
+                        if (link.closest('.actions')) { return; }
+                        link.addEventListener('click', function (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            fetch(link.href).then(function (response) { return response.text(); }).then(function (html) {
+                                list.innerHTML = html;
+                                document.dispatchEvent(new Event('ea.embedded-list.refreshed'));
+                            });
                         });
+                        link.dataset.fetch = 'true';
                     });
-                    link.dataset.fetch = 'true';
                 });
-            });
-        };
-        window.addEventListener('DOMContentLoaded', handler);
-        document.addEventListener('ea.embedded-list.refreshed', handler);
-    })();
-    </script>
+            };
+            window.addEventListener('DOMContentLoaded', handler);
+            document.addEventListener('ea.embedded-list.refreshed', handler);
+        })();
+        </script>
+    {% endif %}
 {%- endblock embedded_list_widget -%}
