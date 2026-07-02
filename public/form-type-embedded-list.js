@@ -15,8 +15,13 @@
  * response is discarded silently.
  *
  * Fires `ea.embedded-list.refreshed` on the document at the end of every
- * successful swap; project code can subscribe to it to rebind any
- * fragment-scoped behaviour that doesn't survive an innerHTML swap.
+ * successful swap (with the refreshed list in `event.detail.list`); project
+ * code can subscribe to it to rebind any fragment-scoped behaviour that
+ * doesn't survive an innerHTML swap.
+ *
+ * Listens for `ea.embedded-list.reload` on each list container: dispatching
+ * it re-fetches the list's current URL (page/sort/filter state included) —
+ * used e.g. after an in-place row deletion.
  */
 const FRAGMENT_HEADER = { 'X-EA-Fragment': '1' };
 const inflight = new WeakMap();
@@ -36,8 +41,12 @@ async function loadFragment(list, url) {
         }
         list.innerHTML = html;
         list.dataset.loaded = 'true';
+        // Keep the reload source in sync with pagination/sort/filter
+        // navigation, so an `ea.embedded-list.reload` re-fetches the view the
+        // user is looking at, not the initial page.
+        list.dataset.src = url;
         bindNavigation(list);
-        document.dispatchEvent(new Event('ea.embedded-list.refreshed'));
+        document.dispatchEvent(new CustomEvent('ea.embedded-list.refreshed', { detail: { list } }));
     } catch (error) {
         if (error.name === 'AbortError') {
             return;
@@ -80,6 +89,7 @@ function bindNavigation(list) {
 function init() {
     document.querySelectorAll('.field-embedded-list[data-src]:not([data-ea-fragment-initialised])').forEach((list) => {
         list.dataset.eaFragmentInitialised = 'true';
+        list.addEventListener('ea.embedded-list.reload', () => loadFragment(list, list.dataset.src));
         loadFragment(list, list.dataset.src);
     });
 }

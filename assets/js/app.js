@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 class App {
     #sidebarWidthLocalStorageKey;
     #contentWidthLocalStorageKey;
+    #pendingConfirmationElement = null;
 
     constructor() {
         this.#sidebarWidthLocalStorageKey = 'ea/sidebar/width';
@@ -36,6 +37,12 @@ class App {
         this.#createActionHandlers();
 
         document.addEventListener('ea.collection.item-added', () => this.#createAutoCompleteFields());
+        // Embedded-list fragments splice new [data-action-confirmation] rows in
+        // after DOMContentLoaded; rebind their openers on every swap. The
+        // confirmation modal + form themselves live on the parent page.
+        document.addEventListener('ea.embedded-list.refreshed', (event) =>
+            this.#createActionConfirmationModals(event.detail?.list ?? document)
+        );
     }
 
     // When using tabs in forms, the selected tab is persisted (in the URL hash) so you
@@ -403,11 +410,19 @@ class App {
         });
     }
 
-    #createActionConfirmationModals() {
+    #createActionConfirmationModals(scope = document) {
         const modalTitle = document.querySelector('#action-confirmation-title');
         const modalButton = document.querySelector('#modal-action-confirmation-button');
-        const defaultTitleTemplate = modalTitle?.textContent;
-        const defaultButtonLabel = modalButton?.textContent;
+        if (null === modalTitle || null === modalButton) {
+            return;
+        }
+        // Persist the defaults once: textContent is overwritten on every modal
+        // open, so a later rebind (embedded-list refresh) must not capture a
+        // mutated value as the template.
+        modalTitle.dataset.defaultTemplate ??= modalTitle.textContent;
+        modalButton.dataset.defaultLabel ??= modalButton.textContent;
+        const defaultTitleTemplate = modalTitle.dataset.defaultTemplate;
+        const defaultButtonLabel = modalButton.dataset.defaultLabel;
         const variantToClass = {
             default: 'btn-secondary',
             primary: 'btn-primary',
@@ -417,69 +432,109 @@ class App {
         };
         const allVariantClasses = Object.values(variantToClass);
 
-        document.querySelectorAll('[data-action-confirmation="true"]').forEach((actionElement) => {
-            actionElement.addEventListener('click', (event) => {
-                event.preventDefault();
+        scope
+            .querySelectorAll('[data-action-confirmation="true"]:not([data-ea-confirmation-bound])')
+            .forEach((actionElement) => {
+                actionElement.dataset.eaConfirmationBound = 'true';
+                actionElement.addEventListener('click', (event) => {
+                    event.preventDefault();
 
-                const actionName = actionElement.textContent.trim() || actionElement.getAttribute('title');
-                const entityName = actionElement.getAttribute('data-action-entity-name') || '';
-                const entityId = actionElement.getAttribute('data-action-entity-id') || '';
+                    // The persistent modal-button handler below reads this; storing
+                    // it (instead of arming a { once: true } listener per opener
+                    // click) means a cancelled confirmation leaves no stale handler
+                    // behind that a later confirm would ALSO fire.
+                    this.#pendingConfirmationElement = actionElement;
 
-                // use custom message if provided, otherwise use default modal title
-                const customMessage = actionElement.getAttribute('data-action-confirmation-message');
-                const messageTemplate = customMessage ?? defaultTitleTemplate;
+                    const actionName = actionElement.textContent.trim() || actionElement.getAttribute('title');
+                    const entityName = actionElement.getAttribute('data-action-entity-name') || '';
+                    const entityId = actionElement.getAttribute('data-action-entity-id') || '';
 
-                modalTitle.textContent = messageTemplate
-                    .replace('%action_name%', actionName)
-                    .replace('%entity_name%', entityName)
-                    .replace('%entity_id%', entityId);
+                    // use custom message if provided, otherwise use default modal title
+                    const customMessage = actionElement.getAttribute('data-action-confirmation-message');
+                    const messageTemplate = customMessage ?? defaultTitleTemplate;
 
-                // use custom button label if provided, otherwise use default
-                const customButtonLabel = actionElement.getAttribute('data-action-confirmation-button');
-                modalButton.textContent = customButtonLabel ?? defaultButtonLabel;
+                    modalTitle.textContent = messageTemplate
+                        .replace('%action_name%', actionName)
+                        .replace('%entity_name%', entityName)
+                        .replace('%entity_id%', entityId);
 
-                // apply to the modal button the same variant as the action that opened the modal
-                const variant = actionElement.getAttribute('data-action-variant') || 'danger';
-                const variantClass = variantToClass[variant] || 'btn-danger';
-                modalButton.classList.remove(...allVariantClasses);
-                modalButton.classList.add(variantClass);
+                    // use custom button label if provided, otherwise use default
+                    const customButtonLabel = actionElement.getAttribute('data-action-confirmation-button');
+                    modalButton.textContent = customButtonLabel ?? defaultButtonLabel;
 
-                modalButton.addEventListener(
-                    'click',
-                    () => {
-                        // Case 1: POST action with formaction (like DELETE with CSRF token)
-                        const formAction = actionElement.getAttribute('formaction');
-                        if (formAction) {
-                            const form = document.querySelector('#action-confirmation-form');
-                            form.setAttribute('action', formAction);
-                            form.submit();
-                            return;
-                        }
-
-                        // Case 2: dropdown action rendered as form (data-ea-action-form-id)
-                        const actionFormId = actionElement.getAttribute('data-ea-action-form-id');
-                        if (actionFormId) {
-                            document.getElementById(actionFormId).submit();
-                            return;
-                        }
-
-                        // Case 3: standalone button inside a <form> (renderAsForm)
-                        const parentForm = actionElement.closest('form');
-                        if (parentForm?.hasAttribute('action')) {
-                            parentForm.submit();
-                            return;
-                        }
-
-                        // Case 4: GET action with href
-                        const href = actionElement.getAttribute('href');
-                        if (href) {
-                            window.location.href = href;
-                        }
-                    },
-                    { once: true }
-                );
+                    // apply to the modal button the same variant as the action that opened the modal
+                    const variant = actionElement.getAttribute('data-action-variant') || 'danger';
+                    const variantClass = variantToClass[variant] || 'btn-danger';
+                    modalButton.classList.remove(...allVariantClasses);
+                    modalButton.classList.add(variantClass);
+                });
             });
+
+        if ('true' === modalButton.dataset.eaConfirmationBound) {
+            return;
+        }
+        modalButton.dataset.eaConfirmationBound = 'true';
+        modalButton.addEventListener('click', () => this.#runConfirmedAction());
+        // Dismissing the modal without confirming abandons the pending action.
+        // (On confirm, the direct click handler above runs before Bootstrap's
+        // delegated data-bs-dismiss handler hides the modal.)
+        modalButton.closest('.modal')?.addEventListener('hidden.bs.modal', () => {
+            this.#pendingConfirmationElement = null;
         });
+    }
+
+    #runConfirmedAction() {
+        const actionElement = this.#pendingConfirmationElement;
+        this.#pendingConfirmationElement = null;
+        if (null === actionElement) {
+            return;
+        }
+
+        // Case 1: POST action with formaction (like DELETE with CSRF token)
+        const formAction = actionElement.getAttribute('formaction');
+        if (formAction) {
+            const form = document.querySelector('#action-confirmation-form');
+            form.setAttribute('action', formAction);
+
+            // Inside an embedded-list fragment, a full form submission would
+            // navigate away from the parent page; POST in place and refresh
+            // the list instead. Any failure (e.g. the 409 EntityRemoveException
+            // page) falls back to the full submission so the error is visible.
+            const embeddedList = actionElement.closest('.field-embedded-list');
+            if (null === embeddedList) {
+                form.submit();
+                return;
+            }
+            fetch(formAction, { method: 'POST', body: new FormData(form) })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    embeddedList.dispatchEvent(new Event('ea.embedded-list.reload'));
+                })
+                .catch(() => form.submit());
+            return;
+        }
+
+        // Case 2: dropdown action rendered as form (data-ea-action-form-id)
+        const actionFormId = actionElement.getAttribute('data-ea-action-form-id');
+        if (actionFormId) {
+            document.getElementById(actionFormId).submit();
+            return;
+        }
+
+        // Case 3: standalone button inside a <form> (renderAsForm)
+        const parentForm = actionElement.closest('form');
+        if (parentForm?.hasAttribute('action')) {
+            parentForm.submit();
+            return;
+        }
+
+        // Case 4: GET action with href
+        const href = actionElement.getAttribute('href');
+        if (href) {
+            window.location.href = href;
+        }
     }
 
     #createDefaultRowAction() {
