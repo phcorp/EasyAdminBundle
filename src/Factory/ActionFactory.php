@@ -271,6 +271,17 @@ final readonly class ActionFactory
         if ($actionDto->hasConfirmation()) {
             $confirmationMessage = $actionDto->getConfirmationMessage();
 
+            // a \Closure builds the message per entity (mirrors the label callable
+            // above): it receives the entity instance (no argument for global
+            // actions) and returns true for the generic message, or the message
+            if ($confirmationMessage instanceof \Closure) {
+                $confirmationMessage = \call_user_func_array($confirmationMessage, array_filter([$entityDto?->getInstance()], static fn ($item): bool => null !== $item));
+
+                if (true !== $confirmationMessage && !\is_string($confirmationMessage) && !$confirmationMessage instanceof TranslatableInterface) {
+                    throw new \RuntimeException(sprintf('The closure used to define the confirmation message of the "%s" action %s must return true, a string or a %s instance but it returned a(n) "%s" value instead.', $actionDto->getName(), null !== $entityDto ? 'in the "'.$entityDto->getName().'" entity' : '', TranslatableInterface::class, get_debug_type($confirmationMessage)));
+                }
+            }
+
             $actionDto->addHtmlAttributes([
                 'data-bs-toggle' => 'modal',
                 'data-bs-target' => '#modal-action-confirmation',

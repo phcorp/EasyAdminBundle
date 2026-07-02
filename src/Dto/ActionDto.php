@@ -39,7 +39,7 @@ final class ActionDto
     private ButtonType $buttonType = ButtonType::Submit;
     private ButtonVariant $variant = ButtonVariant::Default;
     private ButtonStyle $style = ButtonStyle::Solid;
-    private bool|string|TranslatableInterface $confirmationMessage = false;
+    private bool|string|TranslatableInterface|\Closure $confirmationMessage = false;
     private string|TranslatableInterface|null $displayableConfirmationMessage = null;
     private string|TranslatableInterface|null $confirmationButtonLabel = null;
 
@@ -318,12 +318,12 @@ final class ActionDto
         return ButtonStyle::Text === $this->style;
     }
 
-    public function getConfirmationMessage(): bool|string|TranslatableInterface
+    public function getConfirmationMessage(): bool|string|TranslatableInterface|\Closure
     {
         return $this->confirmationMessage;
     }
 
-    public function setConfirmationMessage(bool|string|TranslatableInterface $message): void
+    public function setConfirmationMessage(bool|string|TranslatableInterface|\Closure $message): void
     {
         $this->confirmationMessage = $message;
     }
