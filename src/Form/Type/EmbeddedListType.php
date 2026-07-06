@@ -5,7 +5,7 @@ namespace EasyCorp\Bundle\EasyAdminBundle\Form\Type;
 use Doctrine\ORM\PersistentCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Contracts\Registry\AdminControllerRegistryInterface;
-use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGeneratorInterface;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
@@ -17,10 +17,10 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class EmbeddedListType extends AbstractType
 {
-    private AdminUrlGenerator $adminUrlGenerator;
+    private AdminUrlGeneratorInterface $adminUrlGenerator;
     private AdminControllerRegistryInterface $crudControllerRegistry;
 
-    public function __construct(AdminUrlGenerator $adminUrlGenerator, AdminControllerRegistryInterface $controllerRegistry)
+    public function __construct(AdminUrlGeneratorInterface $adminUrlGenerator, AdminControllerRegistryInterface $controllerRegistry)
     {
         $this->adminUrlGenerator = $adminUrlGenerator;
         $this->crudControllerRegistry = $controllerRegistry;
@@ -62,10 +62,12 @@ class EmbeddedListType extends AbstractType
 
         if ($data instanceof PersistentCollection) {
             // Real Doctrine association: derive the target CRUD, the filter field
-            // (the inverse association name) and the owning entity from the mapping.
+            // (the association name on the target side) and the owning entity from
+            // the mapping. Only owning-side mappings carry $inversedBy and only
+            // inverse-side ones carry $mappedBy, so pick by side.
             $assoc = $data->getMapping();
             $entity = $data->getOwner();
-            $field = $assoc->inversedBy ?: $assoc->mappedBy;
+            $field = $assoc->isOwningSide() ? $assoc->inversedBy : $assoc->mappedBy;
             $controllerFqcn = $this->crudControllerRegistry->findCrudControllerByEntity($data->getTypeClass()->getName());
         } else {
             // Virtual/computed collection (no mapping, possibly a null property):
