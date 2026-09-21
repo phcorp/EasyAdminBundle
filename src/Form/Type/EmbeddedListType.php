@@ -53,7 +53,8 @@ class EmbeddedListType extends AbstractType
      *
      * Prerequisites:
      * - ESI MUST be enabled to display the embedded view
-     * - Source entity MUST have a single field identifier accessible by method ::getId()
+     * - Source entity MUST have a single field identifier, exposed as an `id`
+     *   property or by a ::getId() method
      * - Index controller of the target entity MUST be filterable with source entity
      */
     public function buildView(FormView $view, FormInterface $form, array $options): void
@@ -78,7 +79,9 @@ class EmbeddedListType extends AbstractType
             $entity = $form->getParent()?->getData();
         }
 
-        if (null === $controllerFqcn || null === $field || !\is_object($entity) || !method_exists($entity, 'getId')) {
+        $id = \is_object($entity) ? $this->identifierOf($entity) : null;
+
+        if (null === $controllerFqcn || null === $field || null === $id) {
             $view->vars['embedded_list_url'] = null;
 
             return;
@@ -97,7 +100,27 @@ class EmbeddedListType extends AbstractType
             ->setController($controllerFqcn)
             ->setAction(Action::INDEX)
             ->set("filters[$field][comparison]", '=')
-            ->set("filters[$field][value]", (string) $entity->getId())
+            ->set("filters[$field][value]", (string) $id)
             ->generateUrl();
+    }
+
+    /**
+     * An entity may expose its identifier as a property rather than a getter:
+     * PHP 8.4 asymmetric visibility and property hooks make that the natural
+     * form, and an entity written that way has no ::getId() at all.
+     */
+    private function identifierOf(object $entity): mixed
+    {
+        if (method_exists($entity, 'getId')) {
+            return $entity->getId();
+        }
+
+        $reflection = new \ReflectionObject($entity);
+
+        if (!$reflection->hasProperty('id') || !$reflection->getProperty('id')->isPublic()) {
+            return null;
+        }
+
+        return $entity->id;
     }
 }
