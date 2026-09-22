@@ -216,12 +216,12 @@ class EasyAdminTwigExtension extends AbstractExtension implements GlobalsInterfa
                 return (string) $value;
             }
 
-            if (method_exists($value, 'getId')) {
+            if (null !== $id = $this->identifierOf($value)) {
                 return sprintf(
                     '%s #%s',
                     // remove null bytes from class name (this happens in anonymous classes)
                     str_replace("\0", '', $value::class),
-                    $value->getId()
+                    $id
                 );
             }
 
@@ -234,6 +234,41 @@ class EasyAdminTwigExtension extends AbstractExtension implements GlobalsInterfa
         }
 
         return '';
+    }
+
+    /**
+     * The identifier to label an object that is neither translatable nor
+     * Stringable with. It is read from ::getId(), or from a public $id
+     * property: PHP 8.4 asymmetric visibility and property hooks make that
+     * the natural form, and an entity written that way has no ::getId() at
+     * all. NULL means "no identifier to show" — the caller then falls back
+     * to an object hash, which differs from one request to the next.
+     */
+    private function identifierOf(object $entity): ?string
+    {
+        if (method_exists($entity, 'getId')) {
+            $id = $entity->getId();
+        } else {
+            $reflection = new \ReflectionObject($entity);
+
+            if (!$reflection->hasProperty('id')) {
+                return null;
+            }
+
+            $property = $reflection->getProperty('id');
+
+            if (!$property->isPublic() || !$property->isInitialized($entity)) {
+                return null;
+            }
+
+            $id = $entity->id;
+        }
+
+        if (null === $id || \is_array($id) || (\is_object($id) && !$id instanceof \Stringable)) {
+            return null;
+        }
+
+        return (string) $id;
     }
 
     /**
